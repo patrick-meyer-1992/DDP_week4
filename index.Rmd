@@ -1,0 +1,156 @@
+---
+title: "Your Personal Netflix Viewing History"
+author: "Patrick Meyer"
+date: "20 2 2021"
+output: slidy_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+```{r hiddenCode, echo = FALSE, warning=FALSE, tidy=TRUE, message=FALSE}
+library(stringr)
+library(aweek)
+library(plotly)
+library(tidyr)
+library(dplyr)
+library(lubridate)
+netflix = read.csv("NetflixViewingHistory_Patrick.csv", header = TRUE) 
+```
+## Introduction
+
+This application lets the user upload his personal Netflix viewing history which it then uses to calculate a summary of said history. This summary is then displayed back to the user.
+
+For the sake of this presentation my personal data is used.
+
+After the upload the application does some initial processing and filtering to bring the data in the right format for the subsequent plotting.
+
+```{r import, echo = TRUE, warning = FALSE}
+#Break the title into 3 seperate columns with 
+#"Title of show", "Season", "Title of episode"
+netflix = separate(netflix, col = Title, 
+                   into = c("Title", "Season", "Episode"), sep = ': ')
+        
+#Exclude rows which are not in the proper format 
+#and are therefore likely not series
+netflix = netflix[-which(is.na(netflix$Episode)),]
+        
+#Break up the Date-Column in separate columns
+netflix$days = substr(netflix$Date, start = 1, stop = 2)
+netflix$months = substr(netflix$Date, start = 4, stop = 5)
+netflix$years = paste("20", substr(netflix$Date, start = 7, stop = 8), 
+                      sep = "")
+netflix$Date = as.Date(paste(netflix$years, "-", netflix$months, "-", 
+                             netflix$days, sep = ""))
+netflix$weekday = wday(netflix$Date, label = FALSE, week_start = 1)
+#Order by Date
+netflix = netflix[order(netflix$Date),]
+```
+
+## First Plot
+
+The first plot extracts the number views each show has, orders them by that number and displays the 10 most watched shows.
+
+```{r TopTen Plot, echo=FALSE, out.width="100%"}
+        startDate = netflix$Date[1]
+        endDate = netflix$Date[nrow(netflix)]
+        
+        netflixTitleCounts = count(netflix, Title)
+        netflixTitleCounts = netflixTitleCounts[order(netflixTitleCounts$n, decreasing = TRUE),]
+
+        #Turn the title into a factor with defined order, so plot_ly 
+        #can recognize this order instead of sorting alphabetically
+        netflixTitleCounts$Title = factor(netflixTitleCounts$Title, 
+                                          levels = netflixTitleCounts$Title[order(netflixTitleCounts$n, 
+                                                                                  decreasing = FALSE)])
+
+        #Plot the ten most watched shows
+        plot_ly(data = netflixTitleCounts[1:10,], x = ~n, y = ~Title, type = "bar",
+                         orientation = "h", marker = list(color = "rgba(229,9,20,1)")) %>%
+            layout(yaxis = list(title = list(standoff = 1), color = "white"),
+                   xaxis = list(color = "white", title = "Total Number of Views"),
+                   title = list(text = paste("Your 10 Most Watched Shows on Netflix From", 
+                                             startDate, "To", endDate, sep = " "),
+                                font = list(color = "white", size = 20)),
+                   margin = list(t = 50),
+                   plot_bgcolor = "rgba(0,0,0,1)",
+                   paper_bgcolor = "rgba(0,0,0,1)")
+```
+
+## Second and Third Plot
+
+The second and third plot count the number of views on each day of the week or month, respectively. The results from that are displayed in two pie charts.
+
+```{r Weekly Distribution, echo=FALSE, out.width="100%"}
+        #Weekly data
+        weeklyDistribution = count(netflix, weekday)
+        weeklyDistribution$weekday = factor(x = weeklyDistribution$weekday,
+                                               labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+        weeklyDistribution$ratio = round((weeklyDistribution$n/sum(weeklyDistribution$n) * 100), 2)
+        
+        #Monthly data
+        monthlyDistribution = count(netflix, months)
+        monthlyDistribution$months = factor(x = monthlyDistribution$months,
+                                            labels = c("Jan", "Feb", "Mar", "Apr", "May", "June",
+                                                       "July","Aug", "Sept", "Oct", "Nov", "Dec"))
+        monthlyDistribution$ratio = round((monthlyDistribution$n/sum(monthlyDistribution$n) * 100), 2)
+
+        
+        combPlot = plot_ly()
+        combPlot = combPlot %>% add_pie(data = weeklyDistribution, labels = ~weekday, values = ~n, 
+                                        name = "Weekly", sort = FALSE, textinfo = "label+percent", 
+                                        marker = list(colors = rep("#E50914", 7), 
+                                                      line = list(color = "#FFFFFF", width = 1)),  
+                                        showlegend = FALSE, direction = "clockwise",
+                                        insidetextfont = list(color = "#FFFFFF"), 
+                                        outsidetextfont = list(color = "#FFFFFF"),
+                                        domain = list(x = c(0, 0.45), y = c(0, 0.8)))
+        
+        combPlot = combPlot %>% add_pie(data = monthlyDistribution, labels = ~months, values = ~n, 
+                                        name = "Monthly", sort = FALSE, textinfo = "label+percent", 
+                                        marker = list(colors = rep("#E50914", 12), 
+                                                      line = list(color = "#FFFFFF", width = 1)),  
+                                        showlegend = FALSE, direction = "clockwise",
+                                        insidetextfont = list(color = "#FFFFFF"), 
+                                        outsidetextfont = list(color = "#FFFFFF"),
+                                        domain = list(x = c(0.55, 1), y = c(0, 0.8)))
+        combPlot = combPlot %>% layout(title = list(font = list(color = "white")),
+                                margin = list(t = 50),
+                                plot_bgcolor = "rgba(0,0,0,1)", 
+                                paper_bgcolor = "rgba(0,0,0,1)", 
+                                xaxis = list(showgrid = TRUE), 
+                                yaxis = list(showgrid = TRUE))
+        
+        combPlot = combPlot %>% add_annotations(x = c((0.45/2), ((0.55+1)/2)), 
+                                                y = 0.9, 
+                                                text = c("Your Views Per Weekday on Netflix", 
+                                                         "Your Views Per Month on Netflix"), 
+                                                showarrow = FALSE, 
+                                                xanchor = "center", 
+                                                font = list(color = "white", size = 14))
+
+        combPlot
+```
+
+
+
+## Fourth Plot
+
+The last plot shows the distribution over the whole Netflix history. You can zoom in by drawing a frame over the plot and get a closer look at specific parts of the distribution. 
+```{r Full Distribution, echo=FALSE, out.width="100%"}
+        startDate = netflix$Date[1]
+        endDate = netflix$Date[nrow(netflix)]
+        
+        dailyDistribution = count(netflix, Date)
+        
+        plot_ly(data = dailyDistribution, x = ~Date, y = ~n, type = "bar", 
+                              marker = list(color = "rgba(229,9,20,1)"))  %>%
+            layout(yaxis = list(title = "Views per Day", color = "white"), 
+                   xaxis = list(title = "Date", color = "white"),
+                   title = list(text = paste("Your Views Per Day on Netflix From", startDate, "To", endDate, sep = " "), 
+                                font = list(color = "white", size = 20)),
+                   margin = list(t = 50),
+                   plot_bgcolor = "rgba(0,0,0,1)", 
+                   paper_bgcolor = "rgba(0,0,0,1)")
+```
+
