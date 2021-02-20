@@ -49,7 +49,7 @@ netflix = netflix[order(netflix$Date),]
 
 ## First Plot
 
-The first plot extracts the number views each show has, orders them by that number and displays the 10 most watched shows.
+The first plot extracts the number of views each show has, orders them by that number and displays the 10 most watched shows.
 
 ```{r TopTen Plot, echo=FALSE, out.width="100%"}
         startDate = netflix$Date[1]
@@ -104,7 +104,7 @@ The second and third plot count the number of views on each day of the week or m
                                         showlegend = FALSE, direction = "clockwise",
                                         insidetextfont = list(color = "#FFFFFF"), 
                                         outsidetextfont = list(color = "#FFFFFF"),
-                                        domain = list(x = c(0, 0.45), y = c(0, 0.8)))
+                                        domain = list(x = c(0, 0.5), y = c(0, 0.9)))
         
         combPlot = combPlot %>% add_pie(data = monthlyDistribution, labels = ~months, values = ~n, 
                                         name = "Monthly", sort = FALSE, textinfo = "label+percent", 
@@ -113,7 +113,7 @@ The second and third plot count the number of views on each day of the week or m
                                         showlegend = FALSE, direction = "clockwise",
                                         insidetextfont = list(color = "#FFFFFF"), 
                                         outsidetextfont = list(color = "#FFFFFF"),
-                                        domain = list(x = c(0.55, 1), y = c(0, 0.8)))
+                                        domain = list(x = c(0.5, 1), y = c(0, 0.9)))
         combPlot = combPlot %>% layout(title = list(font = list(color = "white")),
                                 margin = list(t = 50),
                                 plot_bgcolor = "rgba(0,0,0,1)", 
@@ -121,13 +121,13 @@ The second and third plot count the number of views on each day of the week or m
                                 xaxis = list(showgrid = TRUE), 
                                 yaxis = list(showgrid = TRUE))
         
-        combPlot = combPlot %>% add_annotations(x = c((0.45/2), ((0.55+1)/2)), 
-                                                y = 0.9, 
+        combPlot = combPlot %>% add_annotations(x = c((0.5/2), ((0.5+1)/2)), 
+                                                y = 0.98, 
                                                 text = c("Your Views Per Weekday on Netflix", 
                                                          "Your Views Per Month on Netflix"), 
                                                 showarrow = FALSE, 
                                                 xanchor = "center", 
-                                                font = list(color = "white", size = 14))
+                                                font = list(color = "white", size = 20))
 
         combPlot
 ```
